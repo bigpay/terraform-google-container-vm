@@ -15,7 +15,7 @@
  */
 
 variable "container" {
-  type        = "map"
+  type        = "any"
   description = "A description of the container to deploy"
 
   default = {
