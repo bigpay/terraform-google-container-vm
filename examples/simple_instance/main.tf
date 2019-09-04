@@ -15,16 +15,20 @@
  */
 
 provider "google" {
-  region = "${var.region}"
+  region = var.region
+}
+
+locals {
+  instance_name = format("%s-%s", var.instance_name, substr(md5(module.gce-container.container.image), 0, 8))
 }
 
 data "google_compute_zones" "available" {
-  project = "${var.project_id}"
-  region  = "${var.region}"
+  project = var.project_id
+  region  = var.region
 }
 
 resource "random_shuffle" "zone" {
-  input        = ["${data.google_compute_zones.available.names}"]
+  input        = data.google_compute_zones.available.names
   result_count = 1
 }
 
@@ -64,31 +68,31 @@ module "gce-container" {
 }
 
 resource "google_compute_instance" "vm" {
-  project      = "${var.project_id}"
-  name         = "${var.instance_name}"
+  project      = var.project_id
+  name         = local.instance_name
   machine_type = "n1-standard-1"
-  zone         = "${random_shuffle.zone.result[0]}"
+  zone         = random_shuffle.zone.result[0]
 
   boot_disk {
     initialize_params {
-      image = "${module.gce-container.source_image}"
+      image = module.gce-container.source_image
     }
   }
 
   network_interface {
-    subnetwork_project = "${var.subnetwork_project}"
-    subnetwork         = "${var.subnetwork}"
-    access_config      = {}
+    subnetwork_project = var.subnetwork_project
+    subnetwork         = var.subnetwork
+    access_config {}
   }
 
   tags = ["container-vm-example"]
 
-  metadata {
-    "gce-container-declaration" = "${module.gce-container.metadata_value}"
+  metadata = {
+    gce-container-declaration = module.gce-container.metadata_value
   }
 
-  labels {
-    "container-vm" = "${module.gce-container.vm_container_label}"
+  labels = {
+    container-vm = module.gce-container.vm_container_label
   }
 
   service_account {
